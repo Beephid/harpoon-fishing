@@ -3,7 +3,7 @@ import { defineConfig } from 'vite';
 export default defineConfig(({ command }) => ({
     root: '.',
     publicDir: 'assets',
-    base: command === 'build' ? '/harpoon-game/' : '/',
+    base: command === 'build' ? '/harpoon-fishing/' : '/',
     build: {
         outDir: 'dist',
         assetsDir: 'assets',
