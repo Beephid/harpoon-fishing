@@ -2,6 +2,7 @@ import { CONFIG } from './data/config.js';
 import { StartScreenState } from './states/StartScreenState.js';
 import { PlayState } from './states/PlayState.js';
 import { ScoreScreenState } from './states/ScoreScreenState.js';
+import { audio } from './utils/audio.js';
 
 export class Game {
     constructor(canvas) {
@@ -22,6 +23,23 @@ export class Game {
         this.running = false;
 
         this._boundLoop = (timestamp) => this.loop(timestamp);
+
+        // Music toggle button bounds
+        this.musicBtnBounds = { x: CONFIG.DESIGN_WIDTH - 95, y: CONFIG.DESIGN_HEIGHT - 95, w: 75, h: 75 };
+
+        // Music toggle click handler
+        this._onMusicTap = (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const sx = this.canvas.width / rect.width;
+            const sy = this.canvas.height / rect.height;
+            const px = (e.clientX - rect.left) * sx;
+            const py = (e.clientY - rect.top) * sy;
+            const b = this.musicBtnBounds;
+            if (px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) {
+                audio.toggleMusic();
+            }
+        };
+        canvas.addEventListener('pointerdown', this._onMusicTap);
 
         // Pause when tab is hidden
         document.addEventListener('visibilitychange', () => {
@@ -65,7 +83,52 @@ export class Game {
             this.currentState.render(this.ctx, alpha);
         }
 
+        this._renderMusicToggle(this.ctx);
+
         requestAnimationFrame(this._boundLoop);
+    }
+
+    _renderMusicToggle(ctx) {
+        const b = this.musicBtnBounds;
+        const cx = b.x + b.w / 2;
+        const cy = b.y + b.h / 2;
+
+        ctx.save();
+        ctx.globalAlpha = 0.9;
+        ctx.translate(cx, cy);
+        ctx.scale(1.5, 1.5);
+
+        // Note head
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.ellipse(4, 8, 7, 5, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Stem
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(10, 8);
+        ctx.lineTo(10, -14);
+        ctx.stroke();
+
+        // Flag
+        ctx.beginPath();
+        ctx.moveTo(10, -14);
+        ctx.quadraticCurveTo(26, -8, 10, -2);
+        ctx.fill();
+
+        // Muted slash
+        if (!audio.musicEnabled) {
+            ctx.strokeStyle = '#e74c3c';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(-8, -12);
+            ctx.lineTo(16, 16);
+            ctx.stroke();
+        }
+
+        ctx.restore();
     }
 
     changeState(newState) {

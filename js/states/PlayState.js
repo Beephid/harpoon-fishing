@@ -101,6 +101,7 @@ export class PlayState {
     update(dt) {
         this.waterRenderer.update(dt);
         this.particles.update(dt);
+        this.input.update(dt);
 
         // Update UI with scores
         if (this.isTwoPlayer) {
@@ -132,6 +133,7 @@ export class PlayState {
                             this.game,
                             this.players[0].scoreManager.getSummary(),
                             this.creatureSheet,
+                            this.treasureSheet,
                             this.players[1].scoreManager.getSummary(),
                             this.winner
                         ));
@@ -139,7 +141,8 @@ export class PlayState {
                         this.game.changeState(new ScoreScreenState(
                             this.game,
                             this.players[0].scoreManager.getSummary(),
-                            this.creatureSheet
+                            this.creatureSheet,
+                            this.treasureSheet
                         ));
                     }
                 }
@@ -374,7 +377,7 @@ export class PlayState {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
             ctx.fillRect(0, 0, CONFIG.DESIGN_WIDTH, CONFIG.DESIGN_HEIGHT);
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 48px monospace';
+            ctx.font = 'bold 72px monospace';
             ctx.textAlign = 'center';
 
             if (this.isTwoPlayer && this.winner !== null) {
@@ -401,7 +404,7 @@ export class PlayState {
         // Semi-transparent backdrop
         ctx.save();
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        const bw = 460, bh = 100, br = 12;
+        const bw = 690, bh = 150, br = 18;
         const bx = cx - bw / 2, by = cy - bh / 2;
         ctx.beginPath();
         ctx.moveTo(bx + br, by);
@@ -416,20 +419,19 @@ export class PlayState {
         ctx.closePath();
         ctx.fill();
 
-        // Text: "500 pts = 5 harpoons"
-        ctx.font = 'bold 28px monospace';
+        // Text: "500 pts = 1 harpoon + keep going!"
+        ctx.font = 'bold 42px monospace';
         ctx.textAlign = 'center';
         ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 4;
         ctx.fillStyle = '#FFD700';
-        ctx.strokeText('500 pts = 1 harpoon + keep going!', cx, cy - 10);
-        ctx.fillText('500 pts = 1 harpoon + keep going!', cx, cy - 10);
+        ctx.strokeText('500 pts = 1 harpoon + keep going!', cx, cy - 15);
+        ctx.fillText('500 pts = 1 harpoon + keep going!', cx, cy - 15);
 
         // Accept and reject buttons using Silly Placeholders spritesheet
-        // Last row (row 9, y=144), last two columns: reject at col 8 (x=128), accept at col 9 (x=144)
-        const btnSize = 48;
-        const btnGap = 30;
-        const btnY = cy + 10;
+        const btnSize = 72;
+        const btnGap = 45;
+        const btnY = cy + 15;
 
         // Reject button (red X) - left
         const rejectX = cx - btnGap - btnSize;
@@ -463,36 +465,60 @@ export class PlayState {
     _onBuybackPointerDown(e) {
         const pos = this._screenToCanvas(e);
         for (let i = 0; i < this.players.length; i++) {
-            const player = this.players[i];
-            if (!player.buybackPending) continue;
+            if (!this.players[i].buybackPending) continue;
             const btns = this.buybackButtons[i];
             if (!btns) continue;
 
             if (this._hitTest(pos, btns.accept)) {
-                player.scoreManager.score -= this.buybackCost;
-                player.scoreManager.harpoonsRemaining += this.buybackHarpoons;
-                player.shotTimer = player.shotTimerMax;
-                player.buybackPending = false;
-                this.uiRenderer.addHarpoonBounce(i);
-                audio.playBonusHarpoon();
+                this._acceptBuyback(i);
                 e.stopPropagation();
                 return;
             }
             if (this._hitTest(pos, btns.reject)) {
-                player.buybackPending = false;
-                player.gameOver = true;
+                this._rejectBuyback(i);
                 e.stopPropagation();
                 return;
             }
         }
     }
 
+    _acceptBuyback(playerIndex) {
+        const player = this.players[playerIndex];
+        player.scoreManager.score -= this.buybackCost;
+        player.scoreManager.harpoonsRemaining += this.buybackHarpoons;
+        player.shotTimer = player.shotTimerMax;
+        player.buybackPending = false;
+        this.uiRenderer.addHarpoonBounce(playerIndex);
+        audio.playBonusHarpoon();
+    }
+
+    _rejectBuyback(playerIndex) {
+        this.players[playerIndex].buybackPending = false;
+        this.players[playerIndex].gameOver = true;
+    }
+
     _onDevKeyDown(e) {
         if (e.repeat) return;
-        if (e.key !== 'g' && e.key !== 'G') return;
 
-        for (const player of this.players) {
-            player.scoreManager.score += 500;
+        // Dev: G adds 500 score
+        if (e.key === 'g' || e.key === 'G') {
+            for (const player of this.players) {
+                player.scoreManager.score += 500;
+            }
+            return;
+        }
+
+        // Buyback keyboard controls (2P only)
+        if (!this.isTwoPlayer) return;
+        // P1: ArrowUp = accept, ArrowDown = reject
+        if (this.players[0].buybackPending) {
+            if (e.key === 'ArrowUp') { this._acceptBuyback(0); return; }
+            if (e.key === 'ArrowDown') { this._rejectBuyback(0); return; }
+        }
+        // P2: W = accept, S = reject
+        if (this.players[1].buybackPending) {
+            if (e.key === 'w' || e.key === 'W') { this._acceptBuyback(1); return; }
+            if (e.key === 's' || e.key === 'S') { this._rejectBuyback(1); return; }
         }
     }
 

@@ -1,16 +1,17 @@
 import { CONFIG } from '../data/config.js';
 import { SpriteSheet } from '../rendering/SpriteSheet.js';
 import { WaterRenderer } from '../rendering/WaterRenderer.js';
-import { CREATURE_TYPES } from '../data/creatureData.js';
+import { CREATURE_TYPES, TREASURE_TYPES_MAP } from '../data/creatureData.js';
 
 export class ScoreScreenState {
-    constructor(game, summary1, creatureSheet, summary2 = null, winner = null) {
+    constructor(game, summary1, creatureSheet, treasureSheet = null, summary2 = null, winner = null) {
         this.game = game;
         this.summary1 = summary1;
         this.summary2 = summary2;
         this.winner = winner;
         this.isTwoPlayer = summary2 !== null;
         this.creatureSheet = creatureSheet;
+        this.treasureSheet = treasureSheet;
 
         this.waterSheet = new SpriteSheet('Water+.png');
         this.waterRenderer = new WaterRenderer(this.waterSheet);
@@ -30,6 +31,11 @@ export class ScoreScreenState {
         this.displayScore2 = 0;
         setTimeout(() => { this.ready = true; }, 1500);
         this.game.canvas.addEventListener('pointerdown', this._onTap);
+        this._onKeyDown = (e) => {
+            if (e.repeat) return;
+            this._onTap();
+        };
+        window.addEventListener('keydown', this._onKeyDown);
     }
 
     _onTap() {
@@ -250,17 +256,23 @@ export class ScoreScreenState {
             const item = summary.catchesByType[i];
             const ix = startX + i * itemWidth;
 
-            // Draw creature sprite
-            if (this.creatureSheet && this.creatureSheet.loaded) {
-                const data = CREATURE_TYPES[item.typeKey];
-                if (data) {
-                    const frame = data.frames[0];
-                    this.creatureSheet.drawFrame(
-                        ctx,
-                        frame.sx, frame.sy, frame.sw, frame.sh,
-                        ix - 32, galleryY, 64, 64
-                    );
-                }
+            // Draw creature or treasure sprite
+            const creatureData = CREATURE_TYPES[item.typeKey];
+            const treasureData = TREASURE_TYPES_MAP[item.typeKey];
+            if (creatureData && this.creatureSheet && this.creatureSheet.loaded) {
+                const frame = creatureData.frames[0];
+                this.creatureSheet.drawFrame(
+                    ctx,
+                    frame.sx, frame.sy, frame.sw, frame.sh,
+                    ix - 32, galleryY, 64, 64
+                );
+            } else if (treasureData && this.treasureSheet && this.treasureSheet.loaded) {
+                const frame = treasureData.frame;
+                this.treasureSheet.drawFrame(
+                    ctx,
+                    frame.sx, frame.sy, frame.sw, frame.sh,
+                    ix - 32, galleryY, 64, 64
+                );
             }
 
             // Count
@@ -289,17 +301,23 @@ export class ScoreScreenState {
             const item = summary.catchesByType[i];
             const ix = startX + i * itemWidth;
 
-            // Draw creature sprite (smaller)
-            if (this.creatureSheet && this.creatureSheet.loaded) {
-                const data = CREATURE_TYPES[item.typeKey];
-                if (data) {
-                    const frame = data.frames[0];
-                    this.creatureSheet.drawFrame(
-                        ctx,
-                        frame.sx, frame.sy, frame.sw, frame.sh,
-                        ix - 24, galleryY, 48, 48
-                    );
-                }
+            // Draw creature or treasure sprite (smaller)
+            const creatureData = CREATURE_TYPES[item.typeKey];
+            const treasureData = TREASURE_TYPES_MAP[item.typeKey];
+            if (creatureData && this.creatureSheet && this.creatureSheet.loaded) {
+                const frame = creatureData.frames[0];
+                this.creatureSheet.drawFrame(
+                    ctx,
+                    frame.sx, frame.sy, frame.sw, frame.sh,
+                    ix - 24, galleryY, 48, 48
+                );
+            } else if (treasureData && this.treasureSheet && this.treasureSheet.loaded) {
+                const frame = treasureData.frame;
+                this.treasureSheet.drawFrame(
+                    ctx,
+                    frame.sx, frame.sy, frame.sw, frame.sh,
+                    ix - 24, galleryY, 48, 48
+                );
             }
 
             // Count
@@ -318,5 +336,6 @@ export class ScoreScreenState {
 
     exit() {
         this.game.canvas.removeEventListener('pointerdown', this._onTap);
+        window.removeEventListener('keydown', this._onKeyDown);
     }
 }

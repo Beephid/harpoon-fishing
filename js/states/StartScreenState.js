@@ -1,6 +1,8 @@
 import { CONFIG } from '../data/config.js';
 import { SpriteSheet } from '../rendering/SpriteSheet.js';
 import { WaterRenderer } from '../rendering/WaterRenderer.js';
+import { Animator } from '../rendering/Animator.js';
+import { CREATURE_TYPES } from '../data/creatureData.js';
 import { audio } from '../utils/audio.js';
 
 export class StartScreenState {
@@ -8,11 +10,28 @@ export class StartScreenState {
         this.game = game;
         this.waterSheet = new SpriteSheet('Water+.png');
         this.waterRenderer = new WaterRenderer(this.waterSheet);
+        this.creatureSheet = new SpriteSheet('DeepseaCreatures_spritesheet.png');
         this.time = 0;
         this.ready = false;
         this.roundMinutes = 3;
 
+        // Background creatures swimming calmly
+        const bgTypes = ['giant_isopod', 'lanternfish', 'siphonophore', 'dumbo_octopus',
+            'fangtooth', 'winged_comb_jelly', 'viperfish', 'blobfish'];
+        this.bgCreatures = bgTypes.map(typeKey => {
+            const data = CREATURE_TYPES[typeKey];
+            const dir = Math.random() < 0.5 ? -1 : 1;
+            return {
+                x: Math.random() * CONFIG.DESIGN_WIDTH,
+                y: 80 + Math.random() * (CONFIG.DESIGN_HEIGHT - 160),
+                vx: (30 + Math.random() * 40) * dir,
+                displaySize: data.displaySize * 0.8,
+                animator: new Animator(data.frames, 2 + Math.random() * 2),
+            };
+        });
+
         this._onTap = this._onTap.bind(this);
+        this._onKeyDown = this._onKeyDown.bind(this);
     }
 
     enter() {
@@ -21,6 +40,25 @@ export class StartScreenState {
         // Delay readiness briefly to prevent accidental taps
         setTimeout(() => { this.ready = true; }, 500);
         this.game.canvas.addEventListener('pointerdown', this._onTap);
+        window.addEventListener('keydown', this._onKeyDown);
+    }
+
+    _onKeyDown(e) {
+        if (!this.ready || e.repeat) return;
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+            e.preventDefault();
+            if (this.roundMinutes > 1) this.roundMinutes--;
+        }
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+            e.preventDefault();
+            if (this.roundMinutes < 10) this.roundMinutes++;
+        }
+        if (e.key === '1') this._startGame(1);
+        if (e.key === '2') this._startGame(2);
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            this._startGame(1);
+        }
     }
 
     _screenToCanvas(e) {
@@ -91,10 +129,41 @@ export class StartScreenState {
     update(dt) {
         this.time += dt;
         this.waterRenderer.update(dt);
+
+        // Move background creatures, wrapping around edges
+        for (const c of this.bgCreatures) {
+            c.x += c.vx * dt;
+            c.animator.update(dt);
+            if (c.vx > 0 && c.x > CONFIG.DESIGN_WIDTH + c.displaySize) {
+                c.x = -c.displaySize;
+            } else if (c.vx < 0 && c.x < -c.displaySize) {
+                c.x = CONFIG.DESIGN_WIDTH + c.displaySize;
+            }
+        }
     }
 
     render(ctx, alpha) {
         this.waterRenderer.render(ctx);
+
+        // Background creatures (rendered before overlay so they appear underwater)
+        if (this.creatureSheet.loaded) {
+            ctx.save();
+            ctx.globalAlpha = 0.4;
+            for (const c of this.bgCreatures) {
+                const frame = c.animator.getCurrentFrame();
+                const half = c.displaySize / 2;
+                ctx.save();
+                if (c.vx < 0) {
+                    ctx.translate(c.x, c.y);
+                    ctx.scale(-1, 1);
+                    this.creatureSheet.drawFrame(ctx, frame.sx, frame.sy, frame.sw, frame.sh, -half, -half, c.displaySize, c.displaySize);
+                } else {
+                    this.creatureSheet.drawFrame(ctx, frame.sx, frame.sy, frame.sw, frame.sh, c.x - half, c.y - half, c.displaySize, c.displaySize);
+                }
+                ctx.restore();
+            }
+            ctx.restore();
+        }
 
         const cx = CONFIG.DESIGN_WIDTH / 2;
         const cy = CONFIG.DESIGN_HEIGHT / 2;
@@ -108,16 +177,16 @@ export class StartScreenState {
         ctx.textAlign = 'center';
 
         // Title shadow
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = '#dd0a0a';
         ctx.font = 'bold 80px monospace';
-        ctx.fillText('HARPOON', cx + 3, cy - 100 + 3);
+        ctx.fillText('ABYSSAL', cx + 3, cy - 100 + 3);
         ctx.font = 'bold 60px monospace';
         ctx.fillText('FISHING', cx + 3, cy - 35 + 3);
 
         // Title text
         ctx.fillStyle = '#FFD700';
         ctx.font = 'bold 80px monospace';
-        ctx.fillText('HARPOON', cx, cy - 100);
+        ctx.fillText('ABYSSAL', cx, cy - 100);
         ctx.fillStyle = '#7ec8e3';
         ctx.font = 'bold 60px monospace';
         ctx.fillText('FISHING', cx, cy - 35);
@@ -125,7 +194,7 @@ export class StartScreenState {
         // Subtitle
         ctx.fillStyle = '#cccccc';
         ctx.font = '28px monospace';
-        ctx.fillText('Aim and spear sea creatures for points!', cx, cy + 20);
+        ctx.fillText('Use your harpoon to collect deep sea creatures for points!', cx, cy + 20);
 
         // Timer spinner
         ctx.fillStyle = '#cccccc';
@@ -156,13 +225,13 @@ export class StartScreenState {
         this._drawButton(ctx, cx + buttonSpacing / 2, buttonY, buttonWidth, buttonHeight, '2 PLAYERS', '#e74c3c');
 
         // Controls hint
-        ctx.fillStyle = '#999999';
-        ctx.font = '24px monospace';
-        ctx.fillText('Touch & drag to aim, release to fire', cx, cy + 260);
+        ctx.fillStyle = '#ebe7e7';
+        ctx.font = 'bold 28px monospace';
+        ctx.fillText('Touch to aim, or use Arrow Keys', cx, cy + 260);
 
         // 2 player hint
-        ctx.fillStyle = '#777777';
-        ctx.font = '20px monospace';
+        ctx.fillStyle = '#d4d4d4';
+        ctx.font = 'bold 24px monospace';
         ctx.fillText('2 Players: Top half vs Bottom half', cx, cy + 295);
 
         ctx.restore();
@@ -208,5 +277,6 @@ export class StartScreenState {
 
     exit() {
         this.game.canvas.removeEventListener('pointerdown', this._onTap);
+        window.removeEventListener('keydown', this._onKeyDown);
     }
 }

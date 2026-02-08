@@ -33,15 +33,47 @@ class TreasureItem {
 
         // Tubeworm ring
         this.tubewormRingEnabled = Boolean(CONFIG.TREASURE_TUBEWORM_RING_ENABLED && this.creatureSheet);
+        this.ringCreatures = [];
         if (this.tubewormRingEnabled && CREATURE_TYPES.tubeworm) {
+            const twData = CREATURE_TYPES.tubeworm;
             this.tubewormRing = {
                 count: 6,
                 radius: 90,
                 size: 86,
                 angle: Math.random() * Math.PI * 2,
                 speed: 0.35,
-                animator: new Animator(CREATURE_TYPES.tubeworm.frames, 3),
             };
+            for (let i = 0; i < this.tubewormRing.count; i++) {
+                const initAngle = this.tubewormRing.angle + (Math.PI * 2 * i) / this.tubewormRing.count;
+                this.ringCreatures.push({
+                    x: this.x + Math.cos(initAngle) * this.tubewormRing.radius,
+                    y: this.y,
+                    renderY: this.y + Math.sin(initAngle) * this.tubewormRing.radius,
+                    vx: 0,
+                    alive: true,
+                    name: twData.name,
+                    typeKey: 'tubeworm',
+                    rarity: twData.rarity,
+                    points: twData.points,
+                    bonusHarpoons: twData.bonusHarpoons,
+                    hitboxRadius: 30,
+                    displaySize: this.tubewormRing.size,
+                    spriteSheet: this.creatureSheet,
+                    animator: new Animator(twData.frames, 3),
+                    isOffScreen() { return false; },
+                    update(dt) { this.animator.update(dt); },
+                    render(ctx) {
+                        if (!this.spriteSheet || !this.spriteSheet.loaded) return;
+                        const frame = this.animator.getCurrentFrame();
+                        const half = this.displaySize / 2;
+                        this.spriteSheet.drawFrame(
+                            ctx, frame.sx, frame.sy, frame.sw, frame.sh,
+                            this.x - half, this.renderY - half,
+                            this.displaySize, this.displaySize
+                        );
+                    },
+                });
+            }
         } else {
             this.tubewormRingEnabled = false;
             this.tubewormRing = null;
@@ -53,7 +85,20 @@ class TreasureItem {
         this.sparkleTimer += dt;
         if (this.tubewormRingEnabled && this.tubewormRing) {
             this.tubewormRing.angle += dt * this.tubewormRing.speed;
-            this.tubewormRing.animator.update(dt);
+            const bobOffset = Math.sin(this.bobPhase) * 5;
+            const centerY = this.renderY + bobOffset;
+            for (let i = 0; i < this.ringCreatures.length; i++) {
+                if (!this.ringCreatures[i].alive) continue;
+                const angle = this.tubewormRing.angle + (Math.PI * 2 * i) / this.tubewormRing.count;
+                this.ringCreatures[i].x = this.x + Math.cos(angle) * this.tubewormRing.radius;
+                this.ringCreatures[i].renderY = centerY + Math.sin(angle) * this.tubewormRing.radius;
+            }
+        }
+    }
+
+    killRingCreatures() {
+        for (const rc of this.ringCreatures) {
+            rc.alive = false;
         }
     }
 
@@ -74,25 +119,6 @@ class TreasureItem {
             ctx.arc(this.x, centerY, this.displaySize * 0.6, 0, Math.PI * 2);
             ctx.fill();
             ctx.globalAlpha = 1;
-        }
-
-        // Tubeworm ring
-        if (this.tubewormRingEnabled && this.tubewormRing &&
-            this.creatureSheet && this.creatureSheet.loaded) {
-            const frame = this.tubewormRing.animator.getCurrentFrame();
-            const ringHalf = this.tubewormRing.size / 2;
-            for (let i = 0; i < this.tubewormRing.count; i++) {
-                const angle = this.tubewormRing.angle +
-                    (Math.PI * 2 * i) / this.tubewormRing.count;
-                const rx = this.x + Math.cos(angle) * this.tubewormRing.radius;
-                const ry = centerY + Math.sin(angle) * this.tubewormRing.radius;
-                this.creatureSheet.drawFrame(
-                    ctx,
-                    frame.sx, frame.sy, frame.sw, frame.sh,
-                    rx - ringHalf, ry - ringHalf,
-                    this.tubewormRing.size, this.tubewormRing.size
-                );
-            }
         }
 
         // Draw treasure sprite
@@ -176,6 +202,9 @@ export class TreasureChest {
                     );
                     // Add to global creatures array so harpoon can hit it
                     creatures.push(this.spawnedTreasure);
+                    for (const rc of this.spawnedTreasure.ringCreatures) {
+                        creatures.push(rc);
+                    }
                 }
                 break;
 
@@ -210,6 +239,7 @@ export class TreasureChest {
                     this.retreatProgress = 1;
                     // Remove the treasure if it wasn't caught
                     if (this.spawnedTreasure && this.spawnedTreasure.alive) {
+                        this.spawnedTreasure.killRingCreatures();
                         this.spawnedTreasure.alive = false;
                     }
                     this.spawnedTreasure = null;
@@ -243,6 +273,7 @@ export class TreasureChest {
         // If treasure was caught mid-display, skip to closing
         if (this.spawnedTreasure && !this.spawnedTreasure.alive &&
             (this.state === 'open' || this.state === 'retreating')) {
+            this.spawnedTreasure.killRingCreatures();
             this.spawnedTreasure = null;
             this.state = 'closing';
             this.timer = 0;

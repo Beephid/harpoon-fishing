@@ -50,7 +50,7 @@ export const CREATURE_TYPES = {
         displaySize: 96,
         hitboxRadius: 29,
         baseSpeed: 113,
-        name: 'Sea Dragon',
+        name: 'Cookie Cutter Shark',
     },
     dumbo_octopus: {
         frames: frames(0),
@@ -236,32 +236,43 @@ export const CREATURE_TYPES = {
     },
 };
 
-// Treasure items from Treasure+.png (16x16 cells, rows 3-7)
+// Treasure items from Treasure+.png (16x16 cells, rows 4-8)
 // Each treasure has: frame coords (sx, sy), name, points, bonusHarpoons
 export const TREASURE_ITEMS = [
-    // Row 3 (y=48) - gems and coins
-    { sx: 0, sy: 48, name: 'Ruby', points: 200, bonusHarpoons: 2 },
-    { sx: 16, sy: 48, name: 'Emerald', points: 200, bonusHarpoons: 2 },
-    { sx: 32, sy: 48, name: 'Sapphire', points: 200, bonusHarpoons: 2 },
-    { sx: 48, sy: 48, name: 'Diamond', points: 300, bonusHarpoons: 2 },
-    { sx: 64, sy: 48, name: 'Gold Coin', points: 150, bonusHarpoons: 2 },
-    // Row 4 (y=64) - more valuables
-    { sx: 0, sy: 64, name: 'Pearl', points: 250, bonusHarpoons: 2 },
-    { sx: 16, sy: 64, name: 'Amethyst', points: 175, bonusHarpoons: 2 },
-    { sx: 32, sy: 64, name: 'Gold Bar', points: 400, bonusHarpoons: 2 },
-    { sx: 48, sy: 64, name: 'Silver Bar', points: 300, bonusHarpoons: 2 },
-    // Row 5 (y=80) - treasures
-    { sx: 0, sy: 80, name: 'Crown', points: 500, bonusHarpoons: 3 },
-    { sx: 16, sy: 80, name: 'Chalice', points: 350, bonusHarpoons: 2 },
-    { sx: 32, sy: 80, name: 'Scepter', points: 450, bonusHarpoons: 2 },
-    // Row 6 (y=96) - artifacts
-    { sx: 0, sy: 96, name: 'Ancient Ring', points: 375, bonusHarpoons: 2 },
-    { sx: 16, sy: 96, name: 'Golden Idol', points: 600, bonusHarpoons: 3 },
-    { sx: 32, sy: 96, name: 'Treasure Map', points: 250, bonusHarpoons: 3 },
-    // Row 7 (y=112) - rare finds
-    { sx: 0, sy: 112, name: 'Crystal Skull', points: 750, bonusHarpoons: 4 },
-    { sx: 16, sy: 112, name: 'Pirate Medallion', points: 325, bonusHarpoons: 2 },
+    // Row 4 (y=48) - gems and coins
+    { sx: 0, sy: 64, name: 'Diamond Ring', points: 200, bonusHarpoons: 2 },
+    { sx: 16, sy: 64, name: 'Emerald Ring', points: 200, bonusHarpoons: 2 },
+    { sx: 32, sy: 64, name: 'Sapphire Ring', points: 200, bonusHarpoons: 2 },
+    { sx: 48, sy: 64, name: 'Ruby Ring', points: 200, bonusHarpoons: 2 },
+    { sx: 240, sy: 64, name: 'Chalice', points: 300, bonusHarpoons: 2 },
+    // Row 5 (y=80) - more valuables
+    { sx: 64, sy: 80, name: 'Gold Necklace', points: 150, bonusHarpoons: 2 },
+    // Row 6 (y=96) - treasures
+    { sx: 64, sy: 96, name: 'Golden Ankh', points: 250, bonusHarpoons: 2 },
+    { sx: 128, sy: 96, name: 'Golden Lamp', points: 300, bonusHarpoons: 2 },
+    { sx: 144, sy: 96, name: 'Golden Comb', points: 300, bonusHarpoons: 2 },
+    { sx: 240, sy: 96, name: 'Ruby Crown', points: 350, bonusHarpoons: 3 },
+    { sx: 224, sy: 96, name: 'Ruby Tiara', points: 350, bonusHarpoons: 2 },
+    { sx: 208, sy: 96, name: 'Ruby Scepter', points: 300, bonusHarpoons: 2 },
+    // Row 7 (y=112) - artifacts
+    { sx: 64, sy: 112, name: 'Golden Elephant', points: 400, bonusHarpoons: 2 },
+    { sx: 80, sy: 112, name: 'Golden Eagle', points: 400, bonusHarpoons: 2 },
+    { sx: 96, sy: 112, name: 'Zlatorog', points: 450, bonusHarpoons: 3 },
+    // Row 8 (y=128) - rare finds
+    { sx: 32, sy: 48, name: 'Gold Bars', points: 300, bonusHarpoons: 3 },
+    { sx: 96, sy: 80, name: 'Golden Horn', points: 300, bonusHarpoons: 3 },
 ];
+
+// Build a lookup for treasure items by typeKey (for score screen gallery)
+export const TREASURE_TYPES_MAP = {};
+for (const item of TREASURE_ITEMS) {
+    const key = 'treasure_' + item.name.toLowerCase().replace(/\s+/g, '_');
+    TREASURE_TYPES_MAP[key] = {
+        frame: { sx: item.sx, sy: item.sy, sw: 16, sh: 16 },
+        name: item.name,
+        rarity: 'legendary',
+    };
+}
 
 // Ghost creature from Silly_Placeholders.png (col 9, row 4 = pixel 128,48, 16x16)
 export const GHOST_CREATURE = {

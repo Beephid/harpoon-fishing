@@ -37,6 +37,61 @@ export class TwoPlayerInputManager {
         canvas.addEventListener('pointermove', this._onPointerMove);
         canvas.addEventListener('pointerup', this._onPointerUp);
         canvas.addEventListener('pointercancel', this._onPointerUp);
+
+        // Keyboard support: P1 = arrows, P2 = A/D/W
+        this._keysHeld = new Set();
+        this._onKeyDown = this._onKeyDown.bind(this);
+        this._onKeyUp = this._onKeyUp.bind(this);
+        window.addEventListener('keydown', this._onKeyDown);
+        window.addEventListener('keyup', this._onKeyUp);
+    }
+
+    _onKeyDown(e) {
+        if (e.repeat) return;
+        // P1 aim
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+            e.preventDefault();
+            this._keysHeld.add(e.key);
+            this.p1.isAiming = true;
+        }
+        // P1 fire
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            this.p1.wantsFire = true;
+        }
+        // P2 aim
+        if (e.key === 'a' || e.key === 'A' || e.key === 'd' || e.key === 'D') {
+            this._keysHeld.add(e.key.toLowerCase());
+            this.p2.isAiming = true;
+        }
+        // P2 fire
+        if (e.key === 'w' || e.key === 'W') {
+            this.p2.wantsFire = true;
+        }
+    }
+
+    _onKeyUp(e) {
+        this._keysHeld.delete(e.key);
+        this._keysHeld.delete(e.key.toLowerCase());
+        if (!this._keysHeld.has('ArrowLeft') && !this._keysHeld.has('ArrowRight')) {
+            if (this.p1.activePointerId === null) this.p1.isAiming = false;
+        }
+        if (!this._keysHeld.has('a') && !this._keysHeld.has('d')) {
+            if (this.p2.activePointerId === null) this.p2.isAiming = false;
+        }
+    }
+
+    update(dt) {
+        const aimSpeed = 3;
+        if (this._keysHeld.has('ArrowLeft')) this.p1.aimAngle -= aimSpeed * dt;
+        if (this._keysHeld.has('ArrowRight')) this.p1.aimAngle += aimSpeed * dt;
+        if (this._keysHeld.has('a')) this.p2.aimAngle -= aimSpeed * dt;
+        if (this._keysHeld.has('d')) this.p2.aimAngle += aimSpeed * dt;
+
+        const minRad = degToRad(CONFIG.AIM_ANGLE_MIN);
+        const maxRad = degToRad(CONFIG.AIM_ANGLE_MAX);
+        this.p1.aimAngle = clamp(this.p1.aimAngle, minRad, maxRad);
+        this.p2.aimAngle = clamp(this.p2.aimAngle, minRad, maxRad);
     }
 
     _screenToCanvas(e) {
@@ -131,5 +186,7 @@ export class TwoPlayerInputManager {
         this.canvas.removeEventListener('pointermove', this._onPointerMove);
         this.canvas.removeEventListener('pointerup', this._onPointerUp);
         this.canvas.removeEventListener('pointercancel', this._onPointerUp);
+        window.removeEventListener('keydown', this._onKeyDown);
+        window.removeEventListener('keyup', this._onKeyUp);
     }
 }

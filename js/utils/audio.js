@@ -2,6 +2,11 @@ export class AudioManager {
     constructor() {
         this.ctx = null;
         this.initialized = false;
+        this.musicPlaying = false;
+        this.musicEnabled = true;
+        this._musicSource = null;
+        this._musicGain = null;
+        this._musicBuffer = null;
     }
 
     init() {
@@ -9,6 +14,7 @@ export class AudioManager {
         try {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
             this.initialized = true;
+            this._loadMusic();
         } catch (e) {
             console.warn('Web Audio API not available');
         }
@@ -18,6 +24,49 @@ export class AudioManager {
         if (this.ctx && this.ctx.state === 'suspended') {
             this.ctx.resume();
         }
+    }
+
+    _loadMusic() {
+        fetch('Troubadeck 25 Deep Dark Sea.ogg')
+            .then(r => r.arrayBuffer())
+            .then(buf => this.ctx.decodeAudioData(buf))
+            .then(decoded => {
+                this._musicBuffer = decoded;
+                if (this.musicEnabled) this.startMusic();
+            })
+            .catch(() => console.warn('Could not load music'));
+    }
+
+    startMusic() {
+        if (!this.initialized || !this._musicBuffer || this.musicPlaying) return;
+        this._musicGain = this.ctx.createGain();
+        this._musicGain.gain.value = 0.3;
+        this._musicGain.connect(this.ctx.destination);
+
+        this._musicSource = this.ctx.createBufferSource();
+        this._musicSource.buffer = this._musicBuffer;
+        this._musicSource.loop = true;
+        this._musicSource.connect(this._musicGain);
+        this._musicSource.start();
+        this.musicPlaying = true;
+    }
+
+    stopMusic() {
+        if (this._musicSource) {
+            this._musicSource.stop();
+            this._musicSource = null;
+        }
+        this.musicPlaying = false;
+    }
+
+    toggleMusic() {
+        this.musicEnabled = !this.musicEnabled;
+        if (this.musicEnabled) {
+            this.startMusic();
+        } else {
+            this.stopMusic();
+        }
+        return this.musicEnabled;
     }
 
     // Simple noise buffer for splash-like sounds

@@ -20,6 +20,50 @@ export class InputManager {
         canvas.addEventListener('pointermove', this._onPointerMove);
         canvas.addEventListener('pointerup', this._onPointerUp);
         canvas.addEventListener('pointercancel', this._onPointerUp);
+
+        // Keyboard support
+        this._keysHeld = new Set();
+        this._onKeyDown = this._onKeyDown.bind(this);
+        this._onKeyUp = this._onKeyUp.bind(this);
+        window.addEventListener('keydown', this._onKeyDown);
+        window.addEventListener('keyup', this._onKeyUp);
+    }
+
+    _onKeyDown(e) {
+        if (e.repeat) return;
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+            e.preventDefault();
+            this._keysHeld.add(e.key);
+            this.isAiming = true;
+        }
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            this.wantsFire = true;
+        }
+    }
+
+    _onKeyUp(e) {
+        this._keysHeld.delete(e.key);
+        if (!this._keysHeld.has('ArrowLeft') && !this._keysHeld.has('ArrowRight')) {
+            if (this.activePointerId === null) {
+                this.isAiming = false;
+            }
+        }
+    }
+
+    update(dt) {
+        const aimSpeed = 3;
+        if (this._keysHeld.has('ArrowLeft')) {
+            this.aimAngle -= aimSpeed * dt;
+        }
+        if (this._keysHeld.has('ArrowRight')) {
+            this.aimAngle += aimSpeed * dt;
+        }
+        if (this._keysHeld.size > 0) {
+            const minRad = degToRad(CONFIG.AIM_ANGLE_MIN);
+            const maxRad = degToRad(CONFIG.AIM_ANGLE_MAX);
+            this.aimAngle = clamp(this.aimAngle, minRad, maxRad);
+        }
     }
 
     _screenToCanvas(e) {
@@ -82,5 +126,7 @@ export class InputManager {
         this.canvas.removeEventListener('pointermove', this._onPointerMove);
         this.canvas.removeEventListener('pointerup', this._onPointerUp);
         this.canvas.removeEventListener('pointercancel', this._onPointerUp);
+        window.removeEventListener('keydown', this._onKeyDown);
+        window.removeEventListener('keyup', this._onKeyUp);
     }
 }

@@ -133,9 +133,10 @@ export class UIRenderer {
 
     _renderSinglePlayer(ctx, harpoonsRemaining, shotTimer) {
         // Harpoon count (top-left)
-        const bounceOffset = this.harpoonBounce > 0 ? Math.sin(this.harpoonBounce * 25) * 5 : 0;
+        const bounceOffset = this.harpoonBounce > 0 ? Math.sin(this.harpoonBounce * 25) * 8 : 0;
         ctx.save();
-        ctx.translate(30, 45 + bounceOffset);
+        ctx.translate(40, 55 + bounceOffset);
+        ctx.scale(1.5, 1.5);
         this._drawHarpoonIcon(ctx);
         ctx.font = 'bold 36px monospace';
         ctx.fillStyle = '#ffffff';
@@ -149,8 +150,8 @@ export class UIRenderer {
         // Score (top-right)
         const scoreScale = this.scorePop > 0 ? 1 + this.scorePop * 0.3 : 1;
         ctx.save();
-        ctx.translate(CONFIG.DESIGN_WIDTH - 30, 45);
-        ctx.scale(scoreScale, scoreScale);
+        ctx.translate(CONFIG.DESIGN_WIDTH - 40, 55);
+        ctx.scale(scoreScale * 1.5, scoreScale * 1.5);
         ctx.font = 'bold 36px monospace';
         ctx.textAlign = 'right';
         ctx.strokeStyle = '#000000';
@@ -162,7 +163,7 @@ export class UIRenderer {
 
         // Shot timer bar (top center)
         if (shotTimer >= 0) {
-            this._renderShotTimer(ctx, shotTimer, CONFIG.DESIGN_WIDTH / 2, 80);
+            this._renderShotTimer(ctx, shotTimer, CONFIG.DESIGN_WIDTH / 2, 100, 600);
         }
     }
 
@@ -172,19 +173,20 @@ export class UIRenderer {
         // === PLAYER 2 (TOP) ===
         // Player 2 label and stats at top
         ctx.save();
-        ctx.font = 'bold 24px monospace';
+        ctx.font = 'bold 36px monospace';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#e74c3c';
         ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 3;
-        ctx.strokeText('PLAYER 2', cx, 25);
-        ctx.fillText('PLAYER 2', cx, 25);
+        ctx.lineWidth = 4;
+        ctx.strokeText('PLAYER 2', cx, 30);
+        ctx.fillText('PLAYER 2', cx, 30);
         ctx.restore();
 
         // P2 Harpoon count (top-left)
-        const p2Bounce = this.p2.harpoonBounce > 0 ? Math.sin(this.p2.harpoonBounce * 25) * 5 : 0;
+        const p2Bounce = this.p2.harpoonBounce > 0 ? Math.sin(this.p2.harpoonBounce * 25) * 8 : 0;
         ctx.save();
-        ctx.translate(30, 55 + p2Bounce);
+        ctx.translate(40, 70 + p2Bounce);
+        ctx.scale(1.5, 1.5);
         this._drawHarpoonIcon(ctx, '#e74c3c');
         ctx.font = 'bold 28px monospace';
         ctx.fillStyle = '#ffffff';
@@ -198,8 +200,8 @@ export class UIRenderer {
         // P2 Score (top-right)
         const p2Scale = this.p2.scorePop > 0 ? 1 + this.p2.scorePop * 0.3 : 1;
         ctx.save();
-        ctx.translate(CONFIG.DESIGN_WIDTH - 30, 55);
-        ctx.scale(p2Scale, p2Scale);
+        ctx.translate(CONFIG.DESIGN_WIDTH - 40, 70);
+        ctx.scale(p2Scale * 1.5, p2Scale * 1.5);
         ctx.font = 'bold 32px monospace';
         ctx.textAlign = 'right';
         ctx.strokeStyle = '#000000';
@@ -211,25 +213,26 @@ export class UIRenderer {
 
         // P2 Shot timer (smaller, near top)
         if (p2ShotTimer >= 0) {
-            this._renderShotTimer(ctx, p2ShotTimer, cx, 70, 200, '#e74c3c');
+            this._renderShotTimer(ctx, p2ShotTimer, cx, 95, 300, '#e74c3c');
         }
 
         // === PLAYER 1 (BOTTOM) ===
         // Player 1 label and stats at bottom
         ctx.save();
-        ctx.font = 'bold 24px monospace';
+        ctx.font = 'bold 36px monospace';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#3498db';
         ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 3;
-        ctx.strokeText('PLAYER 1', cx, CONFIG.DESIGN_HEIGHT - 55);
-        ctx.fillText('PLAYER 1', cx, CONFIG.DESIGN_HEIGHT - 55);
+        ctx.lineWidth = 4;
+        ctx.strokeText('PLAYER 1', cx, CONFIG.DESIGN_HEIGHT - 60);
+        ctx.fillText('PLAYER 1', cx, CONFIG.DESIGN_HEIGHT - 60);
         ctx.restore();
 
         // P1 Harpoon count (bottom-left)
-        const p1Bounce = this.p1.harpoonBounce > 0 ? Math.sin(this.p1.harpoonBounce * 25) * 5 : 0;
+        const p1Bounce = this.p1.harpoonBounce > 0 ? Math.sin(this.p1.harpoonBounce * 25) * 8 : 0;
         ctx.save();
-        ctx.translate(30, CONFIG.DESIGN_HEIGHT - 35 + p1Bounce);
+        ctx.translate(40, CONFIG.DESIGN_HEIGHT - 40 + p1Bounce);
+        ctx.scale(1.5, 1.5);
         this._drawHarpoonIcon(ctx, '#3498db');
         ctx.font = 'bold 28px monospace';
         ctx.fillStyle = '#ffffff';
@@ -243,8 +246,8 @@ export class UIRenderer {
         // P1 Score (bottom-right)
         const p1Scale = this.p1.scorePop > 0 ? 1 + this.p1.scorePop * 0.3 : 1;
         ctx.save();
-        ctx.translate(CONFIG.DESIGN_WIDTH - 30, CONFIG.DESIGN_HEIGHT - 35);
-        ctx.scale(p1Scale, p1Scale);
+        ctx.translate(CONFIG.DESIGN_WIDTH - 40, CONFIG.DESIGN_HEIGHT - 40);
+        ctx.scale(p1Scale * 1.5, p1Scale * 1.5);
         ctx.font = 'bold 32px monospace';
         ctx.textAlign = 'right';
         ctx.strokeStyle = '#000000';
@@ -256,7 +259,7 @@ export class UIRenderer {
 
         // P1 Shot timer (smaller, near bottom)
         if (p1ShotTimer >= 0) {
-            this._renderShotTimer(ctx, p1ShotTimer, cx, CONFIG.DESIGN_HEIGHT - 90, 200, '#3498db');
+            this._renderShotTimer(ctx, p1ShotTimer, cx, CONFIG.DESIGN_HEIGHT - 105, 300, '#3498db');
         }
 
     }
@@ -323,8 +326,8 @@ export class UIRenderer {
         ctx.restore();
     }
 
-    _renderShotTimer(ctx, shotTimer, centerX, y, barWidth = 400, fillColor = '#3498db') {
-        const barHeight = 16;
+    _renderShotTimer(ctx, shotTimer, centerX, y, barWidth = 600, fillColor = '#3498db') {
+        const barHeight = 24;
         const barX = centerX - barWidth / 2;
         const fraction = Math.max(0, shotTimer / 10);
         const isWarning = shotTimer <= 3;
@@ -371,7 +374,7 @@ export class UIRenderer {
         }
 
         // Timer text
-        ctx.font = 'bold 14px monospace';
+        ctx.font = 'bold 21px monospace';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#ffffff';
         ctx.strokeStyle = '#000000';
@@ -394,7 +397,7 @@ export class UIRenderer {
 
         ctx.save();
         ctx.textAlign = 'center';
-        ctx.font = 'bold 42px monospace';
+        ctx.font = 'bold 63px monospace';
 
         if (isCritical) {
             const pulse = Math.sin(Date.now() * 0.01) * 0.5 + 0.5;
@@ -423,14 +426,14 @@ export class UIRenderer {
 
             // Background pill
             const text = `${toast.name} +${toast.points}`;
-            ctx.font = 'bold 28px monospace';
+            ctx.font = 'bold 42px monospace';
             const metrics = ctx.measureText(text);
-            const padding = 12;
+            const padding = 18;
             const w = metrics.width + padding * 2;
 
             ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
             ctx.beginPath();
-            const rx = -w / 2, ry = -20, rw = w, rh = 40, r = 8;
+            const rx = -w / 2, ry = -30, rw = w, rh = 60, r = 12;
             ctx.moveTo(rx + r, ry);
             ctx.lineTo(rx + rw - r, ry);
             ctx.quadraticCurveTo(rx + rw, ry, rx + rw, ry + r);
@@ -446,13 +449,13 @@ export class UIRenderer {
             // Text
             ctx.textAlign = 'center';
             ctx.fillStyle = CONFIG.RARITY_COLORS[toast.rarity] || '#ffffff';
-            ctx.fillText(text, 0, 8);
+            ctx.fillText(text, 0, 12);
 
             // Bonus harpoons indicator
             if (toast.bonusHarpoons > 0) {
-                ctx.font = 'bold 22px monospace';
+                ctx.font = 'bold 33px monospace';
                 ctx.fillStyle = '#2ECC71';
-                ctx.fillText(`+${toast.bonusHarpoons} Harpoon${toast.bonusHarpoons > 1 ? 's' : ''}!`, 0, 38);
+                ctx.fillText(`+${toast.bonusHarpoons} Harpoon${toast.bonusHarpoons > 1 ? 's' : ''}!`, 0, 52);
             }
 
             ctx.restore();
