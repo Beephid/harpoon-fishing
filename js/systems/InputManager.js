@@ -11,6 +11,7 @@ export class InputManager {
         this.isAiming = false;
         this.wantsFire = false;
         this.activePointerId = null;
+        this.keyboardAimActive = false;
 
         this._onPointerDown = this._onPointerDown.bind(this);
         this._onPointerMove = this._onPointerMove.bind(this);
@@ -29,12 +30,17 @@ export class InputManager {
         window.addEventListener('keyup', this._onKeyUp);
     }
 
+    _updateIsAiming() {
+        this.isAiming = this.activePointerId !== null || this.keyboardAimActive;
+    }
+
     _onKeyDown(e) {
         if (e.repeat) return;
         if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
             e.preventDefault();
             this._keysHeld.add(e.key);
-            this.isAiming = true;
+            this.keyboardAimActive = true;
+            this._updateIsAiming();
         }
         if (e.key === 'ArrowUp') {
             e.preventDefault();
@@ -44,15 +50,11 @@ export class InputManager {
 
     _onKeyUp(e) {
         this._keysHeld.delete(e.key);
-        if (!this._keysHeld.has('ArrowLeft') && !this._keysHeld.has('ArrowRight')) {
-            if (this.activePointerId === null) {
-                this.isAiming = false;
-            }
-        }
+        this._updateIsAiming();
     }
 
     update(dt) {
-        const aimSpeed = 3;
+        const aimSpeed = 1.5;
         if (this._keysHeld.has('ArrowLeft')) {
             this.aimAngle -= aimSpeed * dt;
         }
@@ -93,15 +95,17 @@ export class InputManager {
 
     _onPointerDown(e) {
         if (this.activePointerId !== null) return;
+        this.keyboardAimActive = false;
         this.activePointerId = e.pointerId;
         this.canvas.setPointerCapture(e.pointerId);
         const pos = this._screenToCanvas(e);
         this._updateAngle(pos);
-        this.isAiming = true;
+        this._updateIsAiming();
     }
 
     _onPointerMove(e) {
         if (e.pointerId !== this.activePointerId) return;
+        this.keyboardAimActive = false;
         const pos = this._screenToCanvas(e);
         this._updateAngle(pos);
     }
@@ -109,7 +113,8 @@ export class InputManager {
     _onPointerUp(e) {
         if (e.pointerId !== this.activePointerId) return;
         this.activePointerId = null;
-        this.isAiming = false;
+        this.keyboardAimActive = false;
+        this._updateIsAiming();
         this.wantsFire = true;
     }
 

@@ -37,6 +37,7 @@ export class StartScreenState {
         this.fullscreenBtnBounds = { x: 24, y: 24, size: 46 };
         this.fullscreenSupported = this._isFullscreenSupported();
         this.fullscreenActive = false;
+        this.touchHitPadding = 20;
 
         this.creditsBtnBounds = { x: 24, y: CONFIG.DESIGN_HEIGHT - 90, w: 160, h: 52 };
         this.creditsOpen = false;
@@ -99,24 +100,25 @@ export class StartScreenState {
         if (!this.ready) return;
 
         const pos = this._screenToCanvas(e);
+        const hitPad = this._getHitPadding(e);
         const cx = CONFIG.DESIGN_WIDTH / 2;
         const cy = CONFIG.DESIGN_HEIGHT / 2;
 
         if (this.creditsOpen) {
-            if (this._isCreditsCloseHit(pos) || !this._isPointInRect(pos, this._getCreditsModalBounds())) {
+            if (this._isCreditsCloseHit(pos, hitPad) || !this._isPointInRect(pos, this._getCreditsModalBounds())) {
                 this.creditsOpen = false;
             }
             return;
         }
 
         // Fullscreen button
-        if (this.fullscreenSupported && this._isFullscreenHit(pos)) {
+        if (this.fullscreenSupported && this._isFullscreenHit(pos, hitPad)) {
             this._toggleFullscreen();
             return;
         }
 
         // Credits button
-        if (this._isPointInRect(pos, this.creditsBtnBounds)) {
+        if (this._isPointInRect(pos, this.creditsBtnBounds, hitPad)) {
             this.creditsOpen = true;
             return;
         }
@@ -126,14 +128,14 @@ export class StartScreenState {
         const arrowHH = 30;
 
         // Left arrow (decrease)
-        if (pos.x >= cx - 150 && pos.x <= cx - 70 &&
-            pos.y >= arrowCenterY - arrowHH && pos.y <= arrowCenterY + arrowHH) {
+        if (pos.x >= cx - 150 - hitPad && pos.x <= cx - 70 + hitPad &&
+            pos.y >= arrowCenterY - arrowHH - hitPad && pos.y <= arrowCenterY + arrowHH + hitPad) {
             if (this.roundMinutes > 1) this.roundMinutes--;
             return;
         }
         // Right arrow (increase)
-        if (pos.x >= cx + 70 && pos.x <= cx + 150 &&
-            pos.y >= arrowCenterY - arrowHH && pos.y <= arrowCenterY + arrowHH) {
+        if (pos.x >= cx + 70 - hitPad && pos.x <= cx + 150 + hitPad &&
+            pos.y >= arrowCenterY - arrowHH - hitPad && pos.y <= arrowCenterY + arrowHH + hitPad) {
             if (this.roundMinutes < 10) this.roundMinutes++;
             return;
         }
@@ -146,16 +148,14 @@ export class StartScreenState {
 
         // Check if tap is on 1 Player button
         const btn1X = cx - buttonSpacing / 2 - buttonWidth / 2;
-        if (pos.x >= btn1X && pos.x <= btn1X + buttonWidth &&
-            pos.y >= buttonY && pos.y <= buttonY + buttonHeight) {
+        if (this._isPointInRect(pos, { x: btn1X, y: buttonY, w: buttonWidth, h: buttonHeight }, hitPad)) {
             this._startGame(1);
             return;
         }
 
         // Check if tap is on 2 Players button
         const btn2X = cx + buttonSpacing / 2 - buttonWidth / 2;
-        if (pos.x >= btn2X && pos.x <= btn2X + buttonWidth &&
-            pos.y >= buttonY && pos.y <= buttonY + buttonHeight) {
+        if (this._isPointInRect(pos, { x: btn2X, y: buttonY, w: buttonWidth, h: buttonHeight }, hitPad)) {
             this._startGame(2);
             return;
         }
@@ -385,10 +385,17 @@ export class StartScreenState {
         return document.fullscreenElement || document.webkitFullscreenElement || null;
     }
 
-    _isFullscreenHit(pos) {
+    _getHitPadding(e) {
+        if (!e || !e.pointerType || e.pointerType === 'mouse') {
+            return 0;
+        }
+        return this.touchHitPadding;
+    }
+
+    _isFullscreenHit(pos, pad = 0) {
         const b = this.fullscreenBtnBounds;
-        return pos.x >= b.x && pos.x <= b.x + b.size &&
-            pos.y >= b.y && pos.y <= b.y + b.size;
+        return pos.x >= b.x - pad && pos.x <= b.x + b.size + pad &&
+            pos.y >= b.y - pad && pos.y <= b.y + b.size + pad;
     }
 
     _toggleFullscreen() {
@@ -525,13 +532,13 @@ export class StartScreenState {
         };
     }
 
-    _isCreditsCloseHit(pos) {
-        return this._isPointInRect(pos, this._getCreditsCloseBounds());
+    _isCreditsCloseHit(pos, pad = 0) {
+        return this._isPointInRect(pos, this._getCreditsCloseBounds(), pad);
     }
 
-    _isPointInRect(pos, rect) {
-        return pos.x >= rect.x && pos.x <= rect.x + rect.w &&
-            pos.y >= rect.y && pos.y <= rect.y + rect.h;
+    _isPointInRect(pos, rect, padX = 0, padY = padX) {
+        return pos.x >= rect.x - padX && pos.x <= rect.x + rect.w + padX &&
+            pos.y >= rect.y - padY && pos.y <= rect.y + rect.h + padY;
     }
 
     _wrapText(ctx, text, maxWidth) {

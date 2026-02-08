@@ -15,6 +15,7 @@ export class TwoPlayerInputManager {
             isAiming: false,
             wantsFire: false,
             activePointerId: null,
+            keyboardAimActive: false,
             direction: -1, // fires upward
         };
 
@@ -26,6 +27,7 @@ export class TwoPlayerInputManager {
             isAiming: false,
             wantsFire: false,
             activePointerId: null,
+            keyboardAimActive: false,
             direction: 1, // fires downward
         };
 
@@ -46,13 +48,18 @@ export class TwoPlayerInputManager {
         window.addEventListener('keyup', this._onKeyUp);
     }
 
+    _updateIsAiming(player) {
+        player.isAiming = player.activePointerId !== null || player.keyboardAimActive;
+    }
+
     _onKeyDown(e) {
         if (e.repeat) return;
         // P1 aim
         if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
             e.preventDefault();
             this._keysHeld.add(e.key);
-            this.p1.isAiming = true;
+            this.p1.keyboardAimActive = true;
+            this._updateIsAiming(this.p1);
         }
         // P1 fire
         if (e.key === 'ArrowUp') {
@@ -62,7 +69,8 @@ export class TwoPlayerInputManager {
         // P2 aim
         if (e.key === 'a' || e.key === 'A' || e.key === 'd' || e.key === 'D') {
             this._keysHeld.add(e.key.toLowerCase());
-            this.p2.isAiming = true;
+            this.p2.keyboardAimActive = true;
+            this._updateIsAiming(this.p2);
         }
         // P2 fire
         if (e.key === 'w' || e.key === 'W') {
@@ -73,16 +81,12 @@ export class TwoPlayerInputManager {
     _onKeyUp(e) {
         this._keysHeld.delete(e.key);
         this._keysHeld.delete(e.key.toLowerCase());
-        if (!this._keysHeld.has('ArrowLeft') && !this._keysHeld.has('ArrowRight')) {
-            if (this.p1.activePointerId === null) this.p1.isAiming = false;
-        }
-        if (!this._keysHeld.has('a') && !this._keysHeld.has('d')) {
-            if (this.p2.activePointerId === null) this.p2.isAiming = false;
-        }
+        this._updateIsAiming(this.p1);
+        this._updateIsAiming(this.p2);
     }
 
     update(dt) {
-        const aimSpeed = 3;
+        const aimSpeed = 1.5;
         if (this._keysHeld.has('ArrowLeft')) this.p1.aimAngle -= aimSpeed * dt;
         if (this._keysHeld.has('ArrowRight')) this.p1.aimAngle += aimSpeed * dt;
         if (this._keysHeld.has('a')) this.p2.aimAngle -= aimSpeed * dt;
@@ -141,16 +145,18 @@ export class TwoPlayerInputManager {
         // Allow each player to have one active pointer
         if (player.activePointerId !== null) return;
 
+        player.keyboardAimActive = false;
         player.activePointerId = e.pointerId;
         this.canvas.setPointerCapture(e.pointerId);
         this._updateAngle(player, pos);
-        player.isAiming = true;
+        this._updateIsAiming(player);
     }
 
     _onPointerMove(e) {
         const player = this._getPlayerForPointer(e.pointerId);
         if (!player) return;
 
+        player.keyboardAimActive = false;
         const pos = this._screenToCanvas(e);
         this._updateAngle(player, pos);
     }
@@ -160,7 +166,8 @@ export class TwoPlayerInputManager {
         if (!player) return;
 
         player.activePointerId = null;
-        player.isAiming = false;
+        player.keyboardAimActive = false;
+        this._updateIsAiming(player);
         player.wantsFire = true;
     }
 
