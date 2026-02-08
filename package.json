@@ -1,6 +1,6 @@
 {
   "name": "harpoon-fishing",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "One to two players fish for treasure in a vibrant underwater world, using harpoons to snag deep sea creatures. Compete for the highest score in this fast-paced arcade-style game.",
   "type": "module",
   "scripts": {

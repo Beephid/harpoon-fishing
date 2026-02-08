@@ -253,7 +253,7 @@ export const TREASURE_ITEMS = [
     { sx: 144, sy: 96, name: 'Golden Comb', points: 300, bonusHarpoons: 2 },
     { sx: 240, sy: 96, name: 'Ruby Crown', points: 350, bonusHarpoons: 3 },
     { sx: 224, sy: 96, name: 'Ruby Tiara', points: 350, bonusHarpoons: 2 },
-    { sx: 208, sy: 96, name: 'Ruby Scepter', points: 300, bonusHarpoons: 2 },
+    { sx: 192, sy: 96, name: 'Ruby Scepter', points: 300, bonusHarpoons: 2 },
     // Row 7 (y=112) - artifacts
     { sx: 64, sy: 112, name: 'Golden Elephant', points: 400, bonusHarpoons: 2 },
     { sx: 80, sy: 112, name: 'Golden Eagle', points: 400, bonusHarpoons: 2 },
