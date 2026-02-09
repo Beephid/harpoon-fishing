@@ -170,7 +170,7 @@ export class StartScreenState {
         const buttonY = cy + 150 * ts;
         const buttonWidth = 200;
         const buttonHeight = 60;
-        const buttonSpacing = 240;
+        const buttonSpacing = 280;
 
         // Check if tap is on 1 Player button
         const btn1X = cx - buttonSpacing / 2 - buttonWidth / 2;
@@ -291,9 +291,9 @@ export class StartScreenState {
 
         // Mode selection buttons
         const buttonY = cy + 150 * ts;
-        const buttonWidth = 200;
+        const buttonWidth = 230;
         const buttonHeight = 60;
-        const buttonSpacing = 240;
+        const buttonSpacing = 280;
 
         // 1 Player button
         this._drawButton(ctx, cx - buttonSpacing / 2, buttonY, buttonWidth, buttonHeight, '1 PLAYER', '#3498db');
