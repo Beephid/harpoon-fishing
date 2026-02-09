@@ -17,6 +17,10 @@ function resize() {
 
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
+
+    // Scale text up on small displays for mobile readability
+    const displayScale = width / CONFIG.DESIGN_WIDTH;
+    CONFIG.textScale = Math.min(1.5, Math.max(1, 0.6 / displayScale));
 }
 
 window.addEventListener('resize', resize);

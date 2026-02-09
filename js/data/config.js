@@ -25,6 +25,9 @@ export const CONFIG = {
     MAX_CREATURES_ON_SCREEN: 25,
 
     // Rarity colors
+    // Dynamic text scale (updated on resize for mobile readability)
+    textScale: 1,
+
     RARITY_COLORS: {
         common: '#FFFFFF',
         uncommon: '#2ECC71',

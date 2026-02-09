@@ -126,6 +126,13 @@ export class PlayState {
             this.gameOverTimer += dt;
             const allIdle = this.players.every(p => p.harpoon.state === 'idle');
             if (allIdle && this.gameOverTimer > 1) {
+                // Update session high score
+                for (const player of this.players) {
+                    if (player.scoreManager.score > this.game.sessionHighScore) {
+                        this.game.sessionHighScore = player.scoreManager.score;
+                    }
+                }
+
                 const { ScoreScreenState } = this.game._stateClasses;
                 if (ScoreScreenState) {
                     if (this.isTwoPlayer) {
@@ -180,7 +187,7 @@ export class PlayState {
         for (let i = this.creatures.length - 1; i >= 0; i--) {
             const creature = this.creatures[i];
             if (!creature.alive) {
-                const isSpeared = this.players.some(p => p.harpoon.spearedCreature === creature);
+                const isSpeared = this.players.some(p => p.harpoon.spearedCreatures.includes(creature));
                 if (!isSpeared) {
                     this.creatures.splice(i, 1);
                 }
@@ -200,8 +207,8 @@ export class PlayState {
             player.shotTimer -= dt;
             if (player.shotTimer <= 0) {
                 player.shotTimer = 0;
-                if (this.isTwoPlayer && player.scoreManager.score >= this.buybackCost) {
-                    // Show buyback prompt instead of auto-buying
+                if (player.scoreManager.score >= this.buybackCost) {
+                    // Show buyback prompt
                     player.buybackPending = true;
                 } else {
                     player.gameOver = true;
@@ -232,38 +239,46 @@ export class PlayState {
         }
 
         const prevState = player.harpoon.state;
-        const hadCreature = player.harpoon.spearedCreature !== null;
+        const hadCreatures = player.harpoon.spearedCreatures.length > 0;
         player.harpoon.update(dt);
 
         // Play miss sound when harpoon returns idle without having caught anything
-        if (prevState === 'retracting' && player.harpoon.state === 'idle' && !hadCreature) {
+        if (prevState === 'retracting' && player.harpoon.state === 'idle' && !hadCreatures) {
             audio.playMiss();
         }
 
-        // Collision detection for this player's harpoon
-        const hit = this.collision.check(player.harpoon, this.creatures);
-        if (hit) {
-            player.harpoon.latchCreature(hit);
-            const bonusHarpoons = player.scoreManager.addCatch(hit);
+        // Collision detection for this player's harpoon (returns array, supports pierce)
+        const hits = this.collision.check(player.harpoon, this.creatures);
+        if (hits.length > 0) {
+            player.harpoon.latchCreatures(hits);
 
-            // Audio
-            if (hit.rarity === 'legendary') {
-                audio.playLegendary();
-            } else {
-                audio.playHit();
+            let anyBonus = false;
+            for (const hit of hits) {
+                const bonusHarpoons = player.scoreManager.addCatch(hit);
+
+                // Audio
+                if (hit.rarity === 'legendary') {
+                    audio.playLegendary();
+                } else {
+                    audio.playHit();
+                }
+
+                // Particles
+                if (hit.rarity === 'legendary' || hit.rarity === 'epic') {
+                    this.particles.emitLegendary(hit.x, hit.renderY);
+                } else {
+                    this.particles.emitHit(hit.x, hit.renderY, CONFIG.RARITY_COLORS[hit.rarity]);
+                }
+
+                // Toast
+                this.uiRenderer.addCatchToast(hit.name, hit.rarity, hit.points, hit.bonusHarpoons, hit.x, hit.renderY - 40, playerIndex);
+
+                if (bonusHarpoons > 0) {
+                    anyBonus = true;
+                }
             }
 
-            // Particles
-            if (hit.rarity === 'legendary' || hit.rarity === 'epic') {
-                this.particles.emitLegendary(hit.x, hit.renderY);
-            } else {
-                this.particles.emitHit(hit.x, hit.renderY, CONFIG.RARITY_COLORS[hit.rarity]);
-            }
-
-            // Toast
-            this.uiRenderer.addCatchToast(hit.name, hit.rarity, hit.points, hit.bonusHarpoons, hit.x, hit.renderY - 40, playerIndex);
-
-            if (bonusHarpoons > 0) {
+            if (anyBonus) {
                 this.uiRenderer.addHarpoonBounce(playerIndex);
                 audio.playBonusHarpoon();
             }
@@ -272,6 +287,15 @@ export class PlayState {
 
     _checkGameOver() {
         if (this.gameOverPending) return;
+
+        // Offer buyback to any player who ran out of harpoons and can afford it
+        for (const player of this.players) {
+            if (!player.gameOver && !player.buybackPending &&
+                player.scoreManager.isGameOver && player.harpoon.state === 'idle' &&
+                player.scoreManager.score >= this.buybackCost) {
+                player.buybackPending = true;
+            }
+        }
 
         if (this.isTwoPlayer) {
             // In 2 player mode, game ends when both players are out (not just pending buyback)
@@ -294,7 +318,7 @@ export class PlayState {
         } else {
             // Single player: game over when out of harpoons or shot timer expires
             const p = this.players[0];
-            if ((p.scoreManager.isGameOver && p.harpoon.state === 'idle') || p.gameOver) {
+            if (!p.buybackPending && ((p.scoreManager.isGameOver && p.harpoon.state === 'idle') || p.gameOver)) {
                 this.gameOverPending = true;
                 this.gameOverTimer = 0;
                 audio.playGameOver();
@@ -362,12 +386,10 @@ export class PlayState {
             );
         }
 
-        // Buyback prompts (2P only)
-        if (this.isTwoPlayer) {
-            for (let i = 0; i < this.players.length; i++) {
-                if (this.players[i].buybackPending) {
-                    this._renderBuybackPrompt(ctx, i);
-                }
+        // Buyback prompts
+        for (let i = 0; i < this.players.length; i++) {
+            if (this.players[i].buybackPending) {
+                this._renderBuybackPrompt(ctx, i);
             }
         }
 
@@ -396,10 +418,10 @@ export class PlayState {
 
     _renderBuybackPrompt(ctx, playerIndex) {
         const cx = CONFIG.DESIGN_WIDTH / 2;
-        // P1 (bottom) prompt in lower quarter, P2 (top) prompt in upper quarter
-        const cy = playerIndex === 0
-            ? CONFIG.DESIGN_HEIGHT * 3 / 4
-            : CONFIG.DESIGN_HEIGHT * 1 / 4;
+        // SP: center, 2P: P1 in lower quarter, P2 in upper quarter
+        const cy = this.isTwoPlayer
+            ? (playerIndex === 0 ? CONFIG.DESIGN_HEIGHT * 3 / 4 : CONFIG.DESIGN_HEIGHT * 1 / 4)
+            : CONFIG.DESIGN_HEIGHT / 2;
 
         // Semi-transparent backdrop
         ctx.save();
@@ -508,15 +530,14 @@ export class PlayState {
             return;
         }
 
-        // Buyback keyboard controls (2P only)
-        if (!this.isTwoPlayer) return;
+        // Buyback keyboard controls
         // P1: ArrowUp = accept, ArrowDown = reject
         if (this.players[0].buybackPending) {
             if (e.key === 'ArrowUp') { this._acceptBuyback(0); return; }
             if (e.key === 'ArrowDown') { this._rejectBuyback(0); return; }
         }
         // P2: W = accept, S = reject
-        if (this.players[1].buybackPending) {
+        if (this.isTwoPlayer && this.players[1].buybackPending) {
             if (e.key === 'w' || e.key === 'W') { this._acceptBuyback(1); return; }
             if (e.key === 's' || e.key === 'S') { this._rejectBuyback(1); return; }
         }

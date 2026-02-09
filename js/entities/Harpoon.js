@@ -25,7 +25,7 @@ export class Harpoon {
         this.prevTipY = this.baseY;
         this.currentRopeLength = 0;
 
-        this.spearedCreature = null;
+        this.spearedCreatures = [];
 
         // Player colors
         this.color = playerIndex === 0 ? '#3498db' : '#e74c3c';
@@ -40,14 +40,16 @@ export class Harpoon {
         this.prevTipX = this.baseX;
         this.prevTipY = this.baseY;
         this.currentRopeLength = 0;
-        this.spearedCreature = null;
+        this.spearedCreatures = [];
         this.state = 'traveling';
         return true;
     }
 
-    latchCreature(creature) {
-        this.spearedCreature = creature;
-        creature.alive = false;
+    latchCreatures(creatures) {
+        this.spearedCreatures = creatures;
+        for (const creature of creatures) {
+            creature.alive = false;
+        }
         this.state = 'retracting';
     }
 
@@ -79,7 +81,7 @@ export class Harpoon {
                 this.tipX = this.baseX;
                 this.tipY = this.baseY;
                 this.state = 'idle';
-                this.spearedCreature = null;
+                this.spearedCreatures = [];
             } else {
                 const nx = dxToBase / dist;
                 const ny = dyToBase / dist;
@@ -87,11 +89,11 @@ export class Harpoon {
                 this.tipY += ny * speed * dt;
             }
 
-            // Move speared creature with tip
-            if (this.spearedCreature) {
-                this.spearedCreature.x = this.tipX;
-                this.spearedCreature.y = this.tipY;
-                this.spearedCreature.renderY = this.tipY;
+            // Move speared creatures with tip
+            for (const creature of this.spearedCreatures) {
+                creature.x = this.tipX;
+                creature.y = this.tipY;
+                creature.renderY = this.tipY;
             }
         }
     }

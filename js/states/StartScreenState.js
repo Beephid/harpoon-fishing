@@ -11,6 +11,8 @@ export class StartScreenState {
         this.waterSheet = new SpriteSheet('Water+.png');
         this.waterRenderer = new WaterRenderer(this.waterSheet);
         this.creatureSheet = new SpriteSheet('DeepseaCreatures_spritesheet.png');
+        this.treasureSheet = new SpriteSheet('Treasure+.png');
+        this.sillySheet = new SpriteSheet('Silly_Placeholders.png');
         this.time = 0;
         this.ready = false;
         this.roundMinutes = 3;
@@ -38,6 +40,9 @@ export class StartScreenState {
         this.fullscreenSupported = this._isFullscreenSupported();
         this.fullscreenActive = false;
         this.touchHitPadding = 20;
+
+        this.objectiveBtnBounds = { x: 24, y: CONFIG.DESIGN_HEIGHT - 150, w: 200, h: 52 };
+        this.objectiveOpen = false;
 
         this.creditsBtnBounds = { x: 24, y: CONFIG.DESIGN_HEIGHT - 90, w: 160, h: 52 };
         this.creditsOpen = false;
@@ -67,6 +72,13 @@ export class StartScreenState {
             if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 this.creditsOpen = false;
+            }
+            return;
+        }
+        if (this.objectiveOpen) {
+            if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.objectiveOpen = false;
             }
             return;
         }
@@ -111,9 +123,22 @@ export class StartScreenState {
             return;
         }
 
+        if (this.objectiveOpen) {
+            if (this._isObjectiveCloseHit(pos, hitPad) || !this._isPointInRect(pos, this._getObjectiveModalBounds())) {
+                this.objectiveOpen = false;
+            }
+            return;
+        }
+
         // Fullscreen button
         if (this.fullscreenSupported && this._isFullscreenHit(pos, hitPad)) {
             this._toggleFullscreen();
+            return;
+        }
+
+        // Objective button
+        if (this._isPointInRect(pos, this.objectiveBtnBounds, hitPad)) {
+            this.objectiveOpen = true;
             return;
         }
 
@@ -124,7 +149,8 @@ export class StartScreenState {
         }
 
         // Timer spinner arrows (hit area around the arrow glyphs)
-        const arrowCenterY = cy + 100;
+        const ts = CONFIG.textScale;
+        const arrowCenterY = cy + 100 * ts;
         const arrowHH = 30;
 
         // Left arrow (decrease)
@@ -141,7 +167,7 @@ export class StartScreenState {
         }
 
         // Mode selection buttons
-        const buttonY = cy + 150;
+        const buttonY = cy + 150 * ts;
         const buttonWidth = 200;
         const buttonHeight = 60;
         const buttonSpacing = 240;
@@ -219,6 +245,7 @@ export class StartScreenState {
             this._drawFullscreenButton(ctx);
         }
         this._drawCreditsButton(ctx);
+        this._drawObjectiveButton(ctx);
 
         // Title
         ctx.save();
@@ -244,24 +271,26 @@ export class StartScreenState {
         ctx.font = '28px monospace';
         ctx.fillText('Use your harpoon to collect deep sea creatures for points!', cx, cy + 20);
 
-        // Timer spinner
+        // Timer spinner — scale vertical spacing for mobile readability
+        const ts = CONFIG.textScale;
+
         ctx.fillStyle = '#cccccc';
         ctx.font = '22px monospace';
-        ctx.fillText('ROUND TIME', cx, cy + 70);
+        ctx.fillText('ROUND DURATION', cx, cy + 70 * ts);
 
         ctx.font = 'bold 36px monospace';
         ctx.fillStyle = '#FFD700';
-        ctx.fillText(`${this.roundMinutes}:00`, cx, cy + 105);
+        ctx.fillText(`${this.roundMinutes}:00`, cx, cy + 105 * ts);
 
         // Spinner arrows
         ctx.font = 'bold 36px monospace';
         ctx.fillStyle = this.roundMinutes > 1 ? '#ffffff' : '#555555';
-        ctx.fillText('\u25C0', cx - 110, cy + 105);
+        ctx.fillText('\u25C0', cx - 110, cy + 105 * ts);
         ctx.fillStyle = this.roundMinutes < 10 ? '#ffffff' : '#555555';
-        ctx.fillText('\u25B6', cx + 85, cy + 105);
+        ctx.fillText('\u25B6', cx + 85, cy + 105 * ts);
 
         // Mode selection buttons
-        const buttonY = cy + 150;
+        const buttonY = cy + 150 * ts;
         const buttonWidth = 200;
         const buttonHeight = 60;
         const buttonSpacing = 240;
@@ -275,12 +304,19 @@ export class StartScreenState {
         // Controls hint
         ctx.fillStyle = '#ebe7e7';
         ctx.font = 'bold 28px monospace';
-        ctx.fillText('Touch to aim, or use Arrow Keys', cx, cy + 260);
+        ctx.fillText('Touch to aim, or use Arrow Keys', cx, cy + 260 * ts);
 
         // 2 player hint
         ctx.fillStyle = '#d4d4d4';
         ctx.font = 'bold 24px monospace';
-        ctx.fillText('2 Players: Top half vs Bottom half', cx, cy + 295);
+        ctx.fillText('2 Players: Top half vs Bottom half', cx, cy + 295 * ts);
+
+        // Session high score
+        if (this.game.sessionHighScore > 0) {
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 28px monospace';
+            ctx.fillText(`BEST SCORE: ${this.game.sessionHighScore}`, cx, cy + 345 * ts);
+        }
 
         ctx.restore();
 
@@ -290,6 +326,14 @@ export class StartScreenState {
             ctx.fillRect(0, 0, CONFIG.DESIGN_WIDTH, CONFIG.DESIGN_HEIGHT);
             ctx.restore();
             this._drawCreditsModal(ctx);
+        }
+
+        if (this.objectiveOpen) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.fillRect(0, 0, CONFIG.DESIGN_WIDTH, CONFIG.DESIGN_HEIGHT);
+            ctx.restore();
+            this._drawObjectiveModal(ctx);
         }
     }
 
@@ -369,6 +413,11 @@ export class StartScreenState {
     _drawCreditsButton(ctx) {
         const b = this.creditsBtnBounds;
         this._drawSmallButton(ctx, b.x, b.y, b.w, b.h, 'CREDITS', '#2c3e50');
+    }
+
+    _drawObjectiveButton(ctx) {
+        const b = this.objectiveBtnBounds;
+        this._drawSmallButton(ctx, b.x, b.y, b.w, b.h, 'OBJECTIVE', '#2c3e50');
     }
 
     _isFullscreenSupported() {
@@ -634,6 +683,174 @@ export class StartScreenState {
             y += 30;
         }
 
+        this._drawSmallButton(ctx, closeBtn.x, closeBtn.y, closeBtn.w, closeBtn.h, 'CLOSE', '#1f2d3a');
+
+        ctx.restore();
+    }
+
+    _getObjectiveModalBounds() {
+        const w = 1100;
+        const h = 740;
+        return {
+            x: (CONFIG.DESIGN_WIDTH - w) / 2,
+            y: (CONFIG.DESIGN_HEIGHT - h) / 2,
+            w,
+            h,
+        };
+    }
+
+    _getObjectiveCloseBounds() {
+        const modal = this._getObjectiveModalBounds();
+        const w = 180;
+        const h = 52;
+        return {
+            x: modal.x + (modal.w - w) / 2,
+            y: modal.y + modal.h - h - 26,
+            w,
+            h,
+        };
+    }
+
+    _isObjectiveCloseHit(pos, pad = 0) {
+        return this._isPointInRect(pos, this._getObjectiveCloseBounds(), pad);
+    }
+
+    _drawObjectiveModal(ctx) {
+        const modal = this._getObjectiveModalBounds();
+        const closeBtn = this._getObjectiveCloseBounds();
+        const RC = CONFIG.RARITY_COLORS;
+
+        ctx.save();
+
+        // Modal background
+        ctx.fillStyle = 'rgba(10, 16, 22, 0.96)';
+        ctx.beginPath();
+        const r = 16;
+        ctx.moveTo(modal.x + r, modal.y);
+        ctx.lineTo(modal.x + modal.w - r, modal.y);
+        ctx.quadraticCurveTo(modal.x + modal.w, modal.y, modal.x + modal.w, modal.y + r);
+        ctx.lineTo(modal.x + modal.w, modal.y + modal.h - r);
+        ctx.quadraticCurveTo(modal.x + modal.w, modal.y + modal.h, modal.x + modal.w - r, modal.y + modal.h);
+        ctx.lineTo(modal.x + r, modal.y + modal.h);
+        ctx.quadraticCurveTo(modal.x, modal.y + modal.h, modal.x, modal.y + modal.h - r);
+        ctx.lineTo(modal.x, modal.y + r);
+        ctx.quadraticCurveTo(modal.x, modal.y, modal.x + r, modal.y);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        const pad = 44;
+        let x = modal.x + pad;
+        let y = modal.y + pad + 10;
+
+        // Title
+        ctx.fillStyle = '#f1c40f';
+        ctx.font = 'bold 40px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText('HOW TO PLAY', x, y);
+        y += 50;
+
+        // Goal
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '21px monospace';
+        ctx.fillText('Score points by harpooning deep sea creatures. The game', x, y);
+        y += 27;
+        ctx.fillText('ends when time runs out or you have no harpoons left.', x, y);
+        y += 44;
+
+        // Creatures section
+        ctx.fillStyle = '#f1c40f';
+        ctx.font = 'bold 24px monospace';
+        ctx.fillText('CREATURES', x, y);
+        ctx.fillStyle = '#999999';
+        ctx.font = '19px monospace';
+        ctx.fillText('\u2014 Rarer creatures are worth more points', x + 200, y);
+        y += 18;
+
+        // Rarity icons row
+        const iconSize = 44;
+        const rarities = [
+            { key: 'common', label: 'Common', row: 3 },
+            { key: 'uncommon', label: 'Uncommon', row: 29 },
+            { key: 'rare', label: 'Rare', row: 0 },
+            { key: 'epic', label: 'Epic', row: 9 },
+            { key: 'legendary', label: 'Legendary', row: 4 },
+        ];
+        const cw = modal.w - pad * 2;
+        const colWidth = Math.floor(cw / rarities.length);
+        if (this.creatureSheet.loaded) {
+            for (let i = 0; i < rarities.length; i++) {
+                const rar = rarities[i];
+                const ix = x + i * colWidth;
+                this.creatureSheet.drawFrame(ctx, 0, rar.row * 48, 48, 48, ix, y, iconSize, iconSize);
+                ctx.fillStyle = RC[rar.key];
+                ctx.font = 'bold 18px monospace';
+                ctx.fillText(rar.label, ix + iconSize + 6, y + iconSize / 2 + 6);
+            }
+        }
+        y += iconSize + 24;
+
+        // Special section
+        ctx.fillStyle = '#f1c40f';
+        ctx.font = 'bold 24px monospace';
+        ctx.fillText('SPECIAL', x, y);
+        y += 16;
+
+        // Ghost
+        const sSize = 44;
+        if (this.sillySheet.loaded) {
+            this.sillySheet.drawFrame(ctx, 128, 48, 16, 16, x, y, sSize, sSize);
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 21px monospace';
+        ctx.fillText('Ghost', x + sSize + 10, y + 16);
+        ctx.fillStyle = '#cccccc';
+        ctx.font = '19px monospace';
+        ctx.fillText('\u2014 No points, but restores many harpoons.', x + sSize + 84, y + 16);
+        ctx.fillText('Appears periodically. Don\'t miss it!', x + sSize + 10, y + 40);
+        y += 58;
+
+        // Treasure
+        if (this.treasureSheet.loaded) {
+            this.treasureSheet.drawFrame(ctx, 48, 144, 16, 16, x, y, sSize, sSize);
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 21px monospace';
+        ctx.fillText('Treasure', x + sSize + 10, y + 16);
+        ctx.fillStyle = '#cccccc';
+        ctx.font = '19px monospace';
+        ctx.fillText('\u2014 A chest opens periodically at the center.', x + sSize + 130, y + 16);
+        ctx.fillText('Catch the item for big points + bonus harpoons.', x + sSize + 10, y + 40);
+        ctx.fillText('Guarded by a ring of tubeworms!', x + sSize + 10, y + 64);
+        y += 82;
+
+        // Bonus harpoon hint
+        if (this.creatureSheet.loaded) {
+            this.creatureSheet.drawFrame(ctx, 0, 4 * 48, 48, 48, x, y, sSize, sSize);
+        }
+        ctx.fillStyle = RC.legendary;
+        ctx.font = 'bold 21px monospace';
+        ctx.fillText('Bonus', x + sSize + 10, y + 16);
+        ctx.fillStyle = '#cccccc';
+        ctx.font = '19px monospace';
+        ctx.fillText('\u2014 Some legendary creatures grant bonus harpoons.', x + sSize + 84, y + 16);
+        y += 54;
+
+        // Difficulty
+        ctx.fillStyle = '#f1c40f';
+        ctx.font = 'bold 24px monospace';
+        ctx.fillText('DIFFICULTY', x, y);
+        y += 28;
+        ctx.fillStyle = '#cccccc';
+        ctx.font = '19px monospace';
+        ctx.fillText('As your harpoons run low, rarer creatures appear more often \u2014', x, y);
+        y += 25;
+        ctx.fillText('but everything moves faster!', x, y);
+
+        // Close button
         this._drawSmallButton(ctx, closeBtn.x, closeBtn.y, closeBtn.w, closeBtn.h, 'CLOSE', '#1f2d3a');
 
         ctx.restore();

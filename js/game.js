@@ -13,6 +13,26 @@ export class Game {
         this.canvas.height = CONFIG.DESIGN_HEIGHT;
         this.ctx.imageSmoothingEnabled = false;
 
+        // Auto-scale canvas font sizes for mobile readability
+        const fontDesc = Object.getOwnPropertyDescriptor(
+            CanvasRenderingContext2D.prototype, 'font'
+        );
+        Object.defineProperty(this.ctx, 'font', {
+            set(value) {
+                if (CONFIG.textScale > 1) {
+                    value = value.replace(
+                        /(\d+(?:\.\d+)?)px/,
+                        (_, s) => `${Math.round(parseFloat(s) * CONFIG.textScale)}px`
+                    );
+                }
+                fontDesc.set.call(this, value);
+            },
+            get() {
+                return fontDesc.get.call(this);
+            },
+            configurable: true,
+        });
+
         // Register state classes so states can reference each other
         this._stateClasses = { StartScreenState, PlayState, ScoreScreenState };
 
@@ -23,6 +43,7 @@ export class Game {
         this.running = false;
 
         this._boundLoop = (timestamp) => this.loop(timestamp);
+        this.sessionHighScore = 0;
 
         // Music toggle button bounds
         this.musicBtnBounds = { x: CONFIG.DESIGN_WIDTH - 95, y: CONFIG.DESIGN_HEIGHT - 95, w: 75, h: 75 };
@@ -37,6 +58,7 @@ export class Game {
             const b = this.musicBtnBounds;
             if (px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) {
                 audio.toggleMusic();
+                e.stopImmediatePropagation();
             }
         };
         canvas.addEventListener('pointerdown', this._onMusicTap);
